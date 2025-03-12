@@ -24,7 +24,6 @@ struct ContentView: View {
                 List {
                     ForEach(Array(timers.enumerated()), id: \.element.id) { index, timer in
                         CountdownTimerItem(timer: timer)
-                            .background(index == currentIndex ? Color.blue.opacity(0.1) : Color.clear)
                     }
                     .onDelete(perform: deleteTimers)
                     .onMove(perform: moveTimers)

@@ -21,8 +21,10 @@ struct CountdownTimerItem: View {
                 Text(timer.title)
                 Text("Duration: \(Int(timer.duration)) seconds")
                 Text("Remaining: \(Int(timer.remainingTime)) seconds")
-                Text("Progress: \(Int(timer.progress * 100))%")
+                ProgressView(value: timer.progress)
+                    .tint(timer.isActive ? .blue : (timer.isCompleted ? .green : .gray))
             }
+            .padding(.vertical, 8)
         }
     }
 }

@@ -110,10 +110,10 @@ struct ContentView: View {
         if let firstTimer = timers.first, (currentTimer == nil || !timers.contains(where: { $0.id == currentTimer?.id })) {
             currentTimer = firstTimer
             // Auto-start the first timer
-            firstTimer.startTime = Date()
-            firstTimer.isActive = true
+            //firstTimer.startTime = Date()
+            //firstTimer.isActive = true
             currentIndex = 0
-            startTimerCheckTask()
+            //startTimerCheckTask()
         }
     }
     
@@ -193,6 +193,13 @@ struct ContentView: View {
         } else {
             // All timers completed
             currentTimer = nil
+        }
+        
+        // Save changes to the database
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save changes: \(error)")
         }
     }
 }

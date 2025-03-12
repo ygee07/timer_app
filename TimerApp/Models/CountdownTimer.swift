@@ -9,18 +9,22 @@ import Foundation
 import SwiftData
 import SwiftDate
 
+/// A model representing a countdown timer with sequence management
 @Model
 final class CountdownTimer {
+    /// The display name of the timer
     var title: String
+    /// The total length of the timer in seconds
     var duration: TimeInterval
+    /// The timestamp when the timer was last started (nil when paused or not started)
     var startTime: Date?
-    /// Tracks if the timer finished
+    /// The accumulated time the timer has been running (used to handle pauses)
     var elapsedTime: TimeInterval
-    /// Tracks if the timer finished
+    /// Indicates whether the timer has reached its completion
     var isCompleted: Bool
-    /// Order in the timer queue
+    /// Position in the execution order of multiple timers
     var sequence: Int
-    /// Whether the timer is currently running
+    /// Indicates whether the timer is currently counting down
     var isActive: Bool
     
     init(
@@ -37,12 +41,16 @@ final class CountdownTimer {
         self.elapsedTime = 0
     }
     
+    /// The remaining time left before the timer completes (in seconds)
+    /// Takes into account both accumulated elapsed time and current running time
     var remainingTime: TimeInterval {
         guard isActive, let startTime = startTime else { return duration - elapsedTime }
         let currentElapsed = elapsedTime + Date().timeIntervalSince(startTime)
         return max(0, duration - currentElapsed)
     }
     
+    /// The completion percentage as a value between 0 and 1
+    /// 0 means not started, 1 means fully completed
     var progress: Double {
         return 1 - (remainingTime / duration)
     }

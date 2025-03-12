@@ -18,13 +18,33 @@ struct CountdownTimerItem: View {
     private var detailView: some View {
         TimelineView(.animation(minimumInterval: 0.1)) { _ in
             VStack {
-                Text(timer.title)
-                Text("Duration: \(Int(timer.duration)) seconds")
-                Text("Remaining: \(Int(timer.remainingTime)) seconds")
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading) {
+                        Text("\(formatTime(timer.remainingTime))")
+                            .font(.largeTitle)
+                            .foregroundStyle(Color.secondary)
+                        
+                        Text("\(Int(timer.duration / 60)) mins")
+                            .foregroundStyle(Color.secondary)
+                    }
+                    Spacer()
+                    Text(timer.title)
+                }
+                
                 ProgressView(value: timer.progress)
                     .tint(timer.isActive ? .blue : (timer.isCompleted ? .green : .gray))
             }
-            .padding(.vertical, 8)
+            .padding()
+//            .background {
+//                RoundedRectangle(cornerRadius: 12.0)
+//                    .fill(Material.ultraThick)
+//            }
         }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
     }
 }

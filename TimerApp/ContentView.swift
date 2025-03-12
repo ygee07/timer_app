@@ -35,6 +35,7 @@ struct ContentView: View {
                     }
                     .onDelete(perform: deleteTimers)
                     .onMove(perform: moveTimers)
+                    .listRowBackground(Color.clear)
                 }
                 .safeAreaInset(edge: .bottom) {
                     HStack {
@@ -55,6 +56,7 @@ struct ContentView: View {
                         
                         Spacer()
                         Button(action: {
+                            addTimer()
                             selectedTimer = nil
                             isShowingTimerForm = true
                         }) {
@@ -89,6 +91,20 @@ struct ContentView: View {
             }
         }
     }
+    
+    
+    // TODO: To Delete
+    private func addTimer() {
+        withAnimation {
+            let newTimer = CountdownTimer(
+                title: UUID().uuidString,
+                duration: 3,
+                sequence: timers.count
+            )
+            modelContext.insert(newTimer)
+        }
+    }
+
 
     private func deleteTimers(offsets: IndexSet) {
         withAnimation {
@@ -238,4 +254,8 @@ struct ContentView: View {
             print("Failed to save changes: \(error)")
         }
     }
+}
+
+#Preview {
+    ContentView()
 }

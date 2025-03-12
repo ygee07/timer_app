@@ -12,11 +12,7 @@ struct CountdownTimerItem: View {
     let timer: CountdownTimer
     
     var body: some View {
-        NavigationLink {
-            detailView
-        } label: {
-            listItemView
-        }
+        detailView
     }
     
     private var detailView: some View {
@@ -40,16 +36,6 @@ struct CountdownTimerItem: View {
                     }
                     timer.isActive.toggle()
                 }
-            }
-        }
-    }
-    
-    private var listItemView: some View {
-        TimelineView(.animation(minimumInterval: 0.1)) { _ in
-            HStack {
-                Text(timer.title)
-                Spacer()
-                Text("\(Int(timer.remainingTime))s")
             }
         }
     }

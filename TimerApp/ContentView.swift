@@ -11,7 +11,7 @@ import SwiftDate
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var timers: [CountdownTimer]
+    @Query(sort: \CountdownTimer.sequence) private var timers: [CountdownTimer]
 
     var body: some View {
         NavigationStack {
@@ -20,6 +20,7 @@ struct ContentView: View {
                     CountdownTimerItem(timer: timer)
                 }
                 .onDelete(perform: deleteTimers)
+                .onMove(perform: moveTimers)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -50,11 +51,19 @@ struct ContentView: View {
             for index in offsets {
                 modelContext.delete(timers[index])
             }
+            // Update sequences after deletion
+            for (index, timer) in timers.enumerated() {
+                timer.sequence = index
+            }
         }
     }
-}
 
-#Preview {
-    ContentView()
-        .modelContainer(for: CountdownTimer.self, inMemory: true)
+    private func moveTimers(from source: IndexSet, to destination: Int) {
+        var updatedTimers = timers
+        updatedTimers.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, timer) in updatedTimers.enumerated() {
+            timer.sequence = index
+        }
+    }
 }

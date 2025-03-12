@@ -89,6 +89,8 @@ struct ContentView: View {
                 currentIndex = 0
                 currentTimer = timers[currentIndex]
             }
+            
+            NotificationManager.shared.requestAuthorization()
         }
     }
     
@@ -223,6 +225,8 @@ struct ContentView: View {
         timer.isCompleted = true
         timer.startTime = nil
         timer.elapsedTime = timer.duration
+        
+        NotificationManager.shared.scheduleTimerCompletionNotification(title: timer.title)
         
         // Cancel the current timer check task
         timerCheckTask?.cancel()

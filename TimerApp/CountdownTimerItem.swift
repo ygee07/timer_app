@@ -35,10 +35,6 @@ struct CountdownTimerItem: View {
                     .tint(timer.isActive ? .blue : (timer.isCompleted ? .green : .gray))
             }
             .padding()
-//            .background {
-//                RoundedRectangle(cornerRadius: 12.0)
-//                    .fill(Material.ultraThick)
-//            }
         }
     }
     

@@ -22,6 +22,16 @@ struct ContentView: View {
     @State private var isShowingTimerForm = false
     @State private var selectedTimer: CountdownTimer?
 
+    // Repeat functionality
+    @State private var shouldRepeatTimers = false
+    @State private var repeatInterval: TimeInterval = 0 // In minutes
+    @State private var isShowingRepeatOptions = false
+    @State private var repeatTask: Task<Void, Never>?
+    @State private var repeatEndDate: Date?
+
+    // Add this property to trigger UI updates
+    @State private var timerTick = false
+
     var body: some View {
         NavigationStack {
             TimelineView(.animation(minimumInterval: 0.1)) { _ in
@@ -39,8 +49,27 @@ struct ContentView: View {
                 }
                 .safeAreaInset(edge: .bottom) {
                     HStack {
-                        EditButton()
-                            .labelStyle(.iconOnly)
+                        TimelineView(.animation(minimumInterval: 1.0)) { _ in
+                            Button(action: {
+                                isShowingRepeatOptions = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    if shouldRepeatTimers, let endDate = repeatEndDate {
+                                        Image(systemName: "repeat.circle.fill")
+                                            .font(.title)
+                                        let remaining = endDate.timeIntervalSince(Date())
+                                        if remaining > 0 {
+                                            Text(timeString(from: endDate))
+                                                .monospacedDigit()
+                                                .font(.caption)
+                                        }
+                                    } else {
+                                        Image(systemName: shouldRepeatTimers ? "repeat.circle.fill" : "repeat.circle")
+                                            .font(.title)
+                                    }
+                                }
+                            }
+                        }
                         
                         Spacer()
                         
@@ -49,7 +78,7 @@ struct ContentView: View {
                                 currentTimer?.isActive == true ? "Pause" : "Start",
                                 systemImage: currentTimer?.isActive == true ? "pause" : "play"
                             )
-                            
+                            .font(.title)
                         }
                         .labelStyle(.iconOnly)
                         .disabled(timers.isEmpty)
@@ -61,6 +90,7 @@ struct ContentView: View {
                             isShowingTimerForm = true
                         }) {
                             Label("Add Timer", systemImage: "plus")
+                                .font(.title)
                         }
                         .labelStyle(.iconOnly)
                     }
@@ -73,14 +103,25 @@ struct ContentView: View {
                     .padding()
                 }
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    EditButton()
+                }
+            }
         }
         .sheet(isPresented: $isShowingTimerForm) {
             TimerFormView(timer: selectedTimer)
         }
+        .sheet(isPresented: $isShowingRepeatOptions) {
+            RepeatOptionsView(
+                shouldRepeatTimers: $shouldRepeatTimers,
+                repeatInterval: $repeatInterval
+            )
+        }
         .onDisappear {
             timerCheckTask?.cancel()
+            repeatTask?.cancel()
         }
-        // Remove isActive onChange and only keep remainingTime monitoring
         .onChange(of: currentTimer?.remainingTime) { _, _ in
             checkTimerCompletion()
         }
@@ -91,6 +132,11 @@ struct ContentView: View {
             }
             
             NotificationManager.shared.requestAuthorization()
+        }
+        .onChange(of: shouldRepeatTimers) { _, newValue in
+            if !newValue {
+                repeatEndDate = nil
+            }
         }
     }
     
@@ -249,6 +295,11 @@ struct ContentView: View {
         } else {
             // All timers completed
             currentTimer = nil
+            
+            // If repeat is enabled, schedule the repeat
+            if shouldRepeatTimers && repeatInterval > 0 {
+                scheduleTimerRepeat()
+            }
         }
         
         // Save changes to the database
@@ -258,8 +309,75 @@ struct ContentView: View {
             print("Failed to save changes: \(error)")
         }
     }
+    
+    /// Schedules a repeat of all timers after the specified interval
+    private func scheduleTimerRepeat() {
+        // Cancel any existing repeat task
+        repeatTask?.cancel()
+        
+        // Set the end date for the countdown display
+        repeatEndDate = Date().addingTimeInterval(repeatInterval * 60)
+        
+        // Create a new task that waits for the repeat interval then restarts timers
+        repeatTask = Task {
+            do {
+                // Wait for the specified repeat interval (convert minutes to nanoseconds)
+                let waitTimeNanoseconds = UInt64(repeatInterval * 60 * 1_000_000_000)
+                try await Task.sleep(nanoseconds: waitTimeNanoseconds)
+                
+                // Execute on the main thread since we're updating UI
+                await MainActor.run {
+                    if !Task.isCancelled {
+                        // Reset and restart all timers
+                        resetAndRestartTimers()
+                    }
+                }
+            } catch {
+                // Task was cancelled or other error
+                print("Repeat task cancelled or error: \(error)")
+            }
+        }
+    }
+    
+    /// Resets all timers and starts the first one
+    private func resetAndRestartTimers() {
+        guard !timers.isEmpty else { return }
+        
+        // Reset all timers
+        for timer in timers {
+            timer.elapsedTime = 0
+            timer.isActive = false
+            timer.startTime = nil
+            timer.isCompleted = false
+        }
+        
+        // Set the first timer as current and start it
+        currentIndex = 0
+        currentTimer = timers[currentIndex]
+        currentTimer?.isActive = true
+        currentTimer?.startTime = Date()
+        
+        // Clear the repeat end date since we're starting a new cycle
+        repeatEndDate = nil
+        
+        // Start timer check task
+        startTimerCheckTask()
+        
+        // Save changes
+        try? modelContext.save()
+    }
+    
+    /// Formats a date into a countdown string showing minutes and seconds
+    /// - Parameter date: The target date to calculate time remaining
+    /// - Returns: A formatted string in MM:SS format
+    private func timeString(from date: Date) -> String {
+        let remaining = max(date.timeIntervalSince(Date()), 0)
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
 }
 
-#Preview {
-    ContentView()
-}
+//#Preview {
+//    ContentView()
+//}

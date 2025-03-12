@@ -7,49 +7,68 @@
 
 import SwiftUI
 import SwiftData
+import SwiftDate
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query private var timers: [CountdownTimer]
 
     var body: some View {
-        NavigationSplitView {
+        NavigationStack {
             List {
-                ForEach(items) { item in
+                ForEach(timers) { timer in
                     NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                        VStack {
+                            Text(timer.title)
+                            Text("Duration: \(Int(timer.duration)) seconds")
+                            Text("Remaining: \(Int(timer.remainingTime)) seconds")
+                            Text("Progress: \(Int(timer.progress * 100))%")
+                            
+                            Button(timer.isActive ? "Pause" : "Start") {
+                                timer.isActive.toggle()
+                                if timer.isActive {
+                                    timer.startTime = Date()
+                                }
+                            }
+                        }
                     } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                        HStack {
+                            Text(timer.title)
+                            Spacer()
+                            Text("\(Int(timer.remainingTime))s")
+                        }
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .onDelete(perform: deleteTimers)
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
                 ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                    Button(action: addTimer) {
+                        Label("Add Timer", systemImage: "plus")
                     }
                 }
             }
-        } detail: {
-            Text("Select an item")
         }
     }
 
-    private func addItem() {
+    private func addTimer() {
         withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+            let newTimer = CountdownTimer(
+                title: "New Timer",
+                duration: 60,
+                sequence: timers.count
+            )
+            modelContext.insert(newTimer)
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
+    private func deleteTimers(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(items[index])
+                modelContext.delete(timers[index])
             }
         }
     }
@@ -57,5 +76,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: CountdownTimer.self, inMemory: true)
 }

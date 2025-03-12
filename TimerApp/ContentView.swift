@@ -255,6 +255,11 @@ struct ContentView: View {
                 
                 // Wait a short time before checking again
                 try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                
+                // Force UI update periodically
+                await MainActor.run {
+                    timerTick.toggle()
+                }
             }
         }
     }
@@ -316,35 +321,6 @@ struct ContentView: View {
         }
     }
     
-    /// Schedules a repeat of all timers after the specified interval
-    private func scheduleTimerRepeat() {
-        // Cancel any existing repeat task
-        repeatTask?.cancel()
-        
-        // Set the end date for the countdown display
-        repeatEndDate = Date().addingTimeInterval(repeatInterval)
-        
-        // Create a new task that waits for the repeat interval then restarts timers
-        repeatTask = Task {
-            do {
-                // Wait for the specified repeat interval (convert minutes to nanoseconds)
-                let waitTimeNanoseconds = UInt64(repeatInterval * 60 * 1_000_000_000)
-                try await Task.sleep(nanoseconds: waitTimeNanoseconds)
-                
-                // Execute on the main thread since we're updating UI
-                await MainActor.run {
-                    if !Task.isCancelled {
-                        // Reset and restart all timers
-                        resetAndRestartTimers()
-                    }
-                }
-            } catch {
-                // Task was cancelled or other error
-                print("Repeat task cancelled or error: \(error)")
-            }
-        }
-    }
-    
     /// Resets all timers and starts the first one
     private func resetAndRestartTimers() {
         guard !timers.isEmpty else { return }
@@ -366,11 +342,51 @@ struct ContentView: View {
         // Clear the repeat end date since we're starting a new cycle
         repeatEndDate = nil
         
+        // Update UI state to reflect that timer is running
+        isTimerRunning = true
+        
         // Start timer check task
         startTimerCheckTask()
         
         // Save changes
         try? modelContext.save()
+        
+        // Force UI update
+        timerTick.toggle()
+    }
+    
+    /// Schedules a repeat of all timers after the specified interval
+    private func scheduleTimerRepeat() {
+        // Cancel any existing repeat task
+        repeatTask?.cancel()
+        
+        // Set the end date for the countdown display
+        repeatEndDate = Date().addingTimeInterval(repeatInterval)
+        
+        // Create a new task that waits for the repeat interval then restarts timers
+        repeatTask = Task {
+            do {
+                // Wait for the specified repeat interval (convert minutes to nanoseconds)
+                let waitTimeNanoseconds = UInt64(repeatInterval * 1_000_000_000)
+                try await Task.sleep(nanoseconds: waitTimeNanoseconds)
+                
+                // Execute on the main thread since we're updating UI
+                await MainActor.run {
+                    if !Task.isCancelled {
+                        // Reset and restart all timers
+                        resetAndRestartTimers()
+                        
+                        // Ensure the timer check task is running
+                        if timerCheckTask == nil || timerCheckTask?.isCancelled == true {
+                            startTimerCheckTask()
+                        }
+                    }
+                }
+            } catch {
+                // Task was cancelled or other error
+                print("Repeat task cancelled or error: \(error)")
+            }
+        }
     }
     
     /// Formats a date into a countdown string showing minutes and seconds
@@ -413,7 +429,3 @@ struct ContentView: View {
     }
 
 }
-
-//#Preview {
-//    ContentView()
-//}

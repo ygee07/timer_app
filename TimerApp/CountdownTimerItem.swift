@@ -24,7 +24,7 @@ struct CountdownTimerItem: View {
                             .font(.largeTitle)
                             .foregroundStyle(Color.secondary)
                         
-                        Text("\(Int(timer.duration / 60)) mins")
+                        Text("\(Int(timer.duration)) seconds")
                             .foregroundStyle(Color.secondary)
                     }
                     Spacer()

@@ -61,10 +61,9 @@ struct ContentView: View {
                                         if remaining > 0 {
                                             Text(timeString(from: endDate))
                                                 .monospacedDigit()
-                                                .font(.caption)
                                         }
                                     } else {
-                                        Image(systemName: shouldRepeatTimers ? "repeat.circle.fill" : "repeat.circle")
+                                        Image(systemName: shouldRepeatTimers ? "repeat.circle.fill" : "repeat")
                                             .font(.title)
                                     }
                                 }
@@ -85,7 +84,6 @@ struct ContentView: View {
                         
                         Spacer()
                         Button(action: {
-                            addTimer()
                             selectedTimer = nil
                             isShowingTimerForm = true
                         }) {
@@ -137,19 +135,6 @@ struct ContentView: View {
             if !newValue {
                 repeatEndDate = nil
             }
-        }
-    }
-    
-    
-    // TODO: To Delete
-    private func addTimer() {
-        withAnimation {
-            let newTimer = CountdownTimer(
-                title: UUID().uuidString,
-                duration: 3,
-                sequence: timers.count
-            )
-            modelContext.insert(newTimer)
         }
     }
 
@@ -316,7 +301,7 @@ struct ContentView: View {
         repeatTask?.cancel()
         
         // Set the end date for the countdown display
-        repeatEndDate = Date().addingTimeInterval(repeatInterval * 60)
+        repeatEndDate = Date().addingTimeInterval(repeatInterval)
         
         // Create a new task that waits for the repeat interval then restarts timers
         repeatTask = Task {

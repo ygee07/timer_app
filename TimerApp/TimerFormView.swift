@@ -18,26 +18,29 @@ struct TimerFormView: View {
     @State private var title: String
     @State private var duration: Double
     
+    @FocusState private var focused: Bool
+    
     init(timer: CountdownTimer? = nil) {
         self.timer = timer
         _title = State(initialValue: timer?.title ?? "")
-        _duration = State(initialValue: timer?.duration ?? 300) // Default 5 minutes
+        _duration = State(initialValue: timer?.duration ?? 3) // Default 5 minutes
     }
     
     var body: some View {
         NavigationStack {
             Form {
                 TextField("Title", text: $title)
+                    .focused($focused)
                 
                 Stepper(
                     value: $duration,
-                    in: 60...7200, // 1 minute to 2 hours in seconds
-                    step: 60.0
+                    in: 1...60, // 1 minute to 2 hours in seconds
+                    step: 1.0
                 ) {
                     HStack {
                         Text("Duration")
                         Spacer()
-                        Text("\(Int(duration/60)) minutes")
+                        Text("\(Int(duration)) seconds")
                     }
                 }
             }
@@ -55,6 +58,9 @@ struct TimerFormView: View {
                     }
                     .disabled(title.isEmpty)
                 }
+            }
+            .task {
+                focused = true
             }
         }
         .presentationDetents([.medium])

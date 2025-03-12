@@ -22,7 +22,7 @@ struct RepeatOptionsView: View {
              if shouldRepeatTimers {
                  Section(header: Text("Repeat Interval (minutes)")) {
                      Stepper(value: $repeatInterval, in: 1...60) {
-                         Text("\(Int(repeatInterval)) minute\(repeatInterval == 1 ? "" : "s")")
+                         Text("\(Int(repeatInterval)) second\(repeatInterval == 1 ? "" : "s")")
                      }
                  }
              }

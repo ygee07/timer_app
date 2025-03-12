@@ -29,31 +29,38 @@ struct ContentView: View {
                     .onDelete(perform: deleteTimers)
                     .onMove(perform: moveTimers)
                 }
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
+                .safeAreaInset(edge: .bottom) {
+                    HStack {
                         EditButton()
-                    }
-                    ToolbarItem {
-                        Button(action: addTimer) {
-                            Label("Add Timer", systemImage: "plus")
-                        }
-                    }
-                    
-                    // Add Play/Pause button
-                    ToolbarItem(placement: .navigationBarLeading) {
+                            .labelStyle(.iconOnly)
+                        
+                        Spacer()
+                        
                         Button(action: toggleCurrentTimer) {
                             Label(
                                 currentTimer?.isActive == true ? "Pause" : "Start",
                                 systemImage: currentTimer?.isActive == true ? "pause" : "play"
                             )
+                            
                         }
+                        .labelStyle(.iconOnly)
                         .disabled(timers.isEmpty)
+                        
+                        Spacer()
+                        Button(action: addTimer) {
+                            Label("Add Timer", systemImage: "plus")
+                        }
+                        .labelStyle(.iconOnly)
                     }
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 16)
+                    .background {
+                        Capsule()
+                            .fill(Material.ultraThick)
+                    }
+                    .padding()
                 }
             }
-        }
-        .onAppear {
-            setupInitialTimer()
         }
         .onDisappear {
             timerCheckTask?.cancel()
@@ -61,6 +68,12 @@ struct ContentView: View {
         // Remove isActive onChange and only keep remainingTime monitoring
         .onChange(of: currentTimer?.remainingTime) { _, _ in
             checkTimerCompletion()
+        }
+        .onAppear {
+            if !timers.isEmpty && currentTimer == nil {
+                currentIndex = 0
+                currentTimer = timers[currentIndex]
+            }
         }
     }
 
@@ -87,7 +100,7 @@ struct ContentView: View {
             
             // If the current timer was deleted, reset to the first timer
             if currentTimer == nil || !timers.contains(where: { $0.id == currentTimer?.id }) {
-                setupInitialTimer()
+                currentIndex = 0
             }
         }
     }
@@ -105,19 +118,33 @@ struct ContentView: View {
             currentIndex = newIndex
         }
     }
-
-    private func setupInitialTimer() {
-        if let firstTimer = timers.first, (currentTimer == nil || !timers.contains(where: { $0.id == currentTimer?.id })) {
-            currentTimer = firstTimer
-            // Auto-start the first timer
-            //firstTimer.startTime = Date()
-            //firstTimer.isActive = true
-            currentIndex = 0
-            //startTimerCheckTask()
-        }
-    }
     
+    /// Toggles the active state of the current timer
+    /// Handles the timer's elapsed time calculation and start/pause state
+    /// When all timers are completed, resets all timers and starts from the first one
     private func toggleCurrentTimer() {
+        // Check if we need to reset all timers
+        if (currentTimer == nil || timers.allSatisfy({ $0.isCompleted })) && !timers.isEmpty {
+            // Reset all timers
+            for timer in timers {
+                timer.elapsedTime = 0
+                timer.isActive = false
+                timer.startTime = nil
+                timer.isCompleted = false
+            }
+            
+            // Set the first timer as current
+            currentIndex = 0
+            currentTimer = timers[currentIndex]
+            
+            // Save changes
+            try? modelContext.save()
+        } else if currentTimer == nil && !timers.isEmpty {
+            // Initialize current timer if needed but timers aren't all completed
+            currentIndex = 0
+            currentTimer = timers[currentIndex]
+        }
+        
         guard let timer = currentTimer else { return }
         
         if timer.isActive {
@@ -135,6 +162,8 @@ struct ContentView: View {
         timer.isActive.toggle()
     }
     
+    /// Creates a background task to monitor the current timer's status
+    /// The task checks timer completion every 0.1 seconds
     private func startTimerCheckTask() {
         // Cancel any existing task
         timerCheckTask?.cancel()
@@ -158,6 +187,8 @@ struct ContentView: View {
         }
     }
     
+    /// Verifies if the current timer has completed its duration
+    /// Triggers timer completion handling if necessary
     private func checkTimerCompletion() {
         guard let timer = currentTimer,
               timer.isActive,
@@ -166,6 +197,9 @@ struct ContentView: View {
         handleTimerCompletion(timer)
     }
 
+    /// Processes a completed timer and sets up the next timer in sequence
+    /// - Parameter timer: The timer that has completed its duration
+    /// Saves the changes to the model context and updates timer states
     private func handleTimerCompletion(_ timer: CountdownTimer) {
         timer.isActive = false
         timer.isCompleted = true

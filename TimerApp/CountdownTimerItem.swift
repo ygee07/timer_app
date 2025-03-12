@@ -5,7 +5,6 @@
 //  Created by Yhanco Grey Esteban on 3/12/25.
 //
 
-
 import SwiftUI
 import SwiftDate
 
@@ -21,26 +20,37 @@ struct CountdownTimerItem: View {
     }
     
     private var detailView: some View {
-        VStack {
-            Text(timer.title)
-            Text("Duration: \(Int(timer.duration)) seconds")
-            Text("Remaining: \(Int(timer.remainingTime)) seconds")
-            Text("Progress: \(Int(timer.progress * 100))%")
-            
-            Button(timer.isActive ? "Pause" : "Start") {
-                timer.isActive.toggle()
-                if timer.isActive {
-                    timer.startTime = Date()
+        TimelineView(.animation(minimumInterval: 0.1)) { _ in
+            VStack {
+                Text(timer.title)
+                Text("Duration: \(Int(timer.duration)) seconds")
+                Text("Remaining: \(Int(timer.remainingTime)) seconds")
+                Text("Progress: \(Int(timer.progress * 100))%")
+                
+                Button(timer.isActive ? "Pause" : "Start") {
+                    if timer.isActive {
+                        // Pausing - accumulate elapsed time
+                        if let startTime = timer.startTime {
+                            timer.elapsedTime += Date().timeIntervalSince(startTime)
+                        }
+                        timer.startTime = nil
+                    } else {
+                        // Starting - set new start time
+                        timer.startTime = Date()
+                    }
+                    timer.isActive.toggle()
                 }
             }
         }
     }
     
     private var listItemView: some View {
-        HStack {
-            Text(timer.title)
-            Spacer()
-            Text("\(Int(timer.remainingTime))s")
+        TimelineView(.animation(minimumInterval: 0.1)) { _ in
+            HStack {
+                Text(timer.title)
+                Spacer()
+                Text("\(Int(timer.remainingTime))s")
+            }
         }
     }
 }

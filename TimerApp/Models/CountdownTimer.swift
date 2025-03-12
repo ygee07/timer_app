@@ -15,6 +15,8 @@ final class CountdownTimer {
     var duration: TimeInterval
     var startTime: Date?
     /// Tracks if the timer finished
+    var elapsedTime: TimeInterval
+    /// Tracks if the timer finished
     var isCompleted: Bool
     /// Order in the timer queue
     var sequence: Int
@@ -32,12 +34,13 @@ final class CountdownTimer {
         self.isCompleted = false
         self.isActive = false
         self.startTime = nil
+        self.elapsedTime = 0
     }
     
     var remainingTime: TimeInterval {
-        guard let startTime = startTime, isActive else { return duration }
-        let elapsedTime = Date().timeIntervalSince(startTime)
-        return max(0, duration - elapsedTime)
+        guard isActive, let startTime = startTime else { return duration - elapsedTime }
+        let currentElapsed = elapsedTime + Date().timeIntervalSince(startTime)
+        return max(0, duration - currentElapsed)
     }
     
     var progress: Double {

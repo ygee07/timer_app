@@ -17,6 +17,10 @@ struct ContentView: View {
     @State private var currentTimer: CountdownTimer?
     @State private var timerCheckTask: Task<Void, Never>?
     @State private var currentIndex: Int = 0
+    
+    // Sheet state and selected timer for editing
+    @State private var isShowingTimerForm = false
+    @State private var selectedTimer: CountdownTimer?
 
     var body: some View {
         NavigationStack {
@@ -24,6 +28,10 @@ struct ContentView: View {
                 List {
                     ForEach(Array(timers.enumerated()), id: \.element.id) { index, timer in
                         CountdownTimerItem(timer: timer)
+                            .onTapGesture {
+                                selectedTimer = timer
+                                isShowingTimerForm = true
+                            }
                     }
                     .onDelete(perform: deleteTimers)
                     .onMove(perform: moveTimers)
@@ -46,7 +54,10 @@ struct ContentView: View {
                         .disabled(timers.isEmpty)
                         
                         Spacer()
-                        Button(action: addTimer) {
+                        Button(action: {
+                            selectedTimer = nil
+                            isShowingTimerForm = true
+                        }) {
                             Label("Add Timer", systemImage: "plus")
                         }
                         .labelStyle(.iconOnly)
@@ -61,6 +72,9 @@ struct ContentView: View {
                 }
             }
         }
+        .sheet(isPresented: $isShowingTimerForm) {
+            TimerFormView(timer: selectedTimer)
+        }
         .onDisappear {
             timerCheckTask?.cancel()
         }
@@ -73,17 +87,6 @@ struct ContentView: View {
                 currentIndex = 0
                 currentTimer = timers[currentIndex]
             }
-        }
-    }
-
-    private func addTimer() {
-        withAnimation {
-            let newTimer = CountdownTimer(
-                title: UUID().uuidString,
-                duration: 3,
-                sequence: timers.count
-            )
-            modelContext.insert(newTimer)
         }
     }
 

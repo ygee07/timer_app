@@ -17,27 +17,7 @@ struct ContentView: View {
         NavigationStack {
             List {
                 ForEach(timers) { timer in
-                    NavigationLink {
-                        VStack {
-                            Text(timer.title)
-                            Text("Duration: \(Int(timer.duration)) seconds")
-                            Text("Remaining: \(Int(timer.remainingTime)) seconds")
-                            Text("Progress: \(Int(timer.progress * 100))%")
-                            
-                            Button(timer.isActive ? "Pause" : "Start") {
-                                timer.isActive.toggle()
-                                if timer.isActive {
-                                    timer.startTime = Date()
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(timer.title)
-                            Spacer()
-                            Text("\(Int(timer.remainingTime))s")
-                        }
-                    }
+                    CountdownTimerItem(timer: timer)
                 }
                 .onDelete(perform: deleteTimers)
             }

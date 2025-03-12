@@ -32,6 +32,8 @@ struct ContentView: View {
     // Add this property to trigger UI updates
     @State private var timerTick = false
 
+    @State private var isTimerRunning = false
+
     var body: some View {
         NavigationStack {
             TimelineView(.animation(minimumInterval: 0.1)) { _ in
@@ -48,57 +50,7 @@ struct ContentView: View {
                     .listRowBackground(Color.clear)
                 }
                 .safeAreaInset(edge: .bottom) {
-                    HStack {
-                        TimelineView(.animation(minimumInterval: 1.0)) { _ in
-                            Button(action: {
-                                isShowingRepeatOptions = true
-                            }) {
-                                HStack(spacing: 4) {
-                                    if shouldRepeatTimers, let endDate = repeatEndDate {
-                                        Image(systemName: "repeat.circle.fill")
-                                            .font(.title)
-                                        let remaining = endDate.timeIntervalSince(Date())
-                                        if remaining > 0 {
-                                            Text(timeString(from: endDate))
-                                                .monospacedDigit()
-                                        }
-                                    } else {
-                                        Image(systemName: shouldRepeatTimers ? "repeat.circle.fill" : "repeat")
-                                            .font(.title)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: toggleCurrentTimer) {
-                            Label(
-                                currentTimer?.isActive == true ? "Pause" : "Start",
-                                systemImage: currentTimer?.isActive == true ? "pause" : "play"
-                            )
-                            .font(.title)
-                        }
-                        .labelStyle(.iconOnly)
-                        .disabled(timers.isEmpty)
-                        
-                        Spacer()
-                        Button(action: {
-                            selectedTimer = nil
-                            isShowingTimerForm = true
-                        }) {
-                            Label("Add Timer", systemImage: "plus")
-                                .font(.title)
-                        }
-                        .labelStyle(.iconOnly)
-                    }
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 16)
-                    .background {
-                        Capsule()
-                            .fill(Material.ultraThick)
-                    }
-                    .padding()
+                    bottomControls
                 }
             }
             .toolbar {
@@ -136,6 +88,73 @@ struct ContentView: View {
                 repeatEndDate = nil
             }
         }
+        .onChange(of: currentTimer?.isActive) { _, newValue in
+            isTimerRunning = newValue ?? false
+        }
+    }
+    
+    private var bottomControls: some View {
+        HStack {
+            TimelineView(.animation(minimumInterval: 1.0)) { _ in
+                Button(action: {
+                    isShowingRepeatOptions = true
+                }) {
+                    HStack(spacing: 4) {
+                        if shouldRepeatTimers, let endDate = repeatEndDate {
+                            Image(systemName: "repeat.circle.fill")
+                                .font(.title)
+                            let remaining = endDate.timeIntervalSince(Date())
+                            if remaining > 0 {
+                                Text(timeString(from: endDate))
+                                    .monospacedDigit()
+                            }
+                        } else {
+                            Image(systemName: shouldRepeatTimers ? "repeat.circle.fill" : "repeat")
+                                .font(.title)
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Button(action: stopAndResetTimers) {
+                Label("Stop", systemImage: "stop.fill")
+                    .font(.title)
+            }
+            .labelStyle(.iconOnly)
+            .disabled(timers.isEmpty)
+            
+            Spacer()
+            
+            Button(action: toggleCurrentTimer) {
+                Label(
+                    currentTimer?.isActive == true ? "Pause" : "Start",
+                    systemImage: currentTimer?.isActive == true ? "pause" : "play"
+                )
+                .font(.title)
+            }
+            .labelStyle(.iconOnly)
+            .disabled(timers.isEmpty)
+            
+            Spacer()
+
+            Button(action: {
+                selectedTimer = nil
+                isShowingTimerForm = true
+            }) {
+                Label("Add Timer", systemImage: "plus")
+                    .font(.title)
+            }
+            .labelStyle(.iconOnly)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 16)
+        .background {
+            Capsule()
+                .fill(Material.ultraThick)
+        }
+        .padding()
     }
 
 
@@ -211,6 +230,8 @@ struct ContentView: View {
             startTimerCheckTask()
         }
         timer.isActive.toggle()
+        
+        isTimerRunning = currentTimer?.isActive ?? false
     }
     
     /// Creates a background task to monitor the current timer's status
@@ -361,6 +382,36 @@ struct ContentView: View {
         let seconds = Int(remaining) % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+    
+    /// Stops all timers and resets their status
+    private func stopAndResetTimers() {
+        // Cancel any existing tasks
+        timerCheckTask?.cancel()
+        repeatTask?.cancel()
+
+        // Reset all timers
+        for timer in timers {
+            timer.elapsedTime = 0
+            timer.isActive = false
+            timer.startTime = nil
+            timer.isCompleted = false
+        }
+
+        // Reset current timer and index
+        currentTimer = nil
+        currentIndex = 0
+
+        // Reset repeat-related states
+        shouldRepeatTimers = false
+        repeatEndDate = nil
+
+        // Update UI state
+        isTimerRunning = false
+
+        // Save changes
+        try? modelContext.save()
+    }
+
 }
 
 //#Preview {
